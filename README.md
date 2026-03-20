@@ -2,55 +2,60 @@
 
 Extra Neo-tree sources for browsing LSP call hierarchies and type hierarchies.
 
-## What this provides
+## What this plugin provides
 
-- `call_hierarchy`: shows `textDocument/prepareCallHierarchy` results and lazily expands `callHierarchy/incomingCalls` or `callHierarchy/outgoingCalls`
-- `type_hierarchy`: shows `textDocument/prepareTypeHierarchy` results and lazily expands `typeHierarchy/supertypes` or `typeHierarchy/subtypes`
-- Shared hierarchy runtime under `lua/neo-tree/sources/hierarchy/lib/`
+- `call_hierarchy`
+  - prepares items with `textDocument/prepareCallHierarchy`
+  - browses `incoming calls` and `outgoing calls`
+- `type_hierarchy`
+  - prepares items with `textDocument/prepareTypeHierarchy`
+  - browses `supertypes` and `subtypes`
+- shared hierarchy runtime under `lua/neo-tree/sources/hierarchy/lib/`
 
-The sources resolve the symbol under the cursor from Neo-tree's target window, group root items by LSP client, and open or preview the selected item with Neo-tree's standard commands.
+Both sources resolve the symbol under the cursor from Neo-tree's target window, group root items by LSP client, lazily load child nodes when you expand them, and reuse Neo-tree's normal jump / preview flow for the selected item.
 
 ## Source layout
 
 ```text
 lua/neo-tree/sources/
 ├── call_hierarchy/
-│   ├── init.lua         -- source entrypoint
-│   ├── commands.lua     -- source command table
-│   ├── components.lua   -- source renderer components
-│   └── defaults.lua     -- source defaults and mappings
+│   ├── init.lua
+│   ├── commands.lua
+│   ├── components.lua
+│   └── defaults.lua
 ├── type_hierarchy/
 │   ├── init.lua
 │   ├── commands.lua
 │   ├── components.lua
 │   └── defaults.lua
 └── hierarchy/lib/
-    ├── source.lua       -- shared LSP request + tree-building logic
-    ├── commands.lua     -- shared command factory
-    ├── components.lua   -- shared renderer components
-    ├── defaults.lua     -- shared renderer + window defaults
+    ├── source.lua
+    ├── commands.lua
+    ├── components.lua
+    ├── defaults.lua
     ├── client_filters.lua
     └── kinds.lua
 ```
 
-## How the shared source works
+## How it works
 
-`lua/neo-tree/sources/hierarchy/lib/source.lua` is the runtime used by both sources.
+The shared runtime in `lua/neo-tree/sources/hierarchy/lib/source.lua` does the heavy lifting for both sources:
 
-1. Collect LSP clients attached to the current buffer.
+1. Collect LSP clients attached to Neo-tree's target buffer.
 2. Keep only clients that support the requested hierarchy capability.
 3. Apply `client_filters`.
-4. Send the prepare request once per client, using that client's position encoding.
-5. Build one Neo-tree root node per matching client.
+4. Send the prepare request once per remaining client, using that client's position encoding.
+5. Build one Neo-tree root per client.
 6. Lazily request child nodes when a hierarchy item is expanded.
-7. Reuse Neo-tree preview and jump behavior for the selected item.
-8. Allow switching hierarchy direction from the source window.
+7. Let `gd` switch direction and rebuild the tree.
+8. Jump / reveal the selected item with `vim.lsp.util.show_document(...)` after preloading the target buffer.
 
-Implementation details:
+Root labels reflect the active direction, for example:
 
-- Call hierarchy nodes append a detail suffix like `2 call sites`.
-- Preview support is driven by `node.extra.position` and `node.extra.end_position`.
-- Child hierarchy items are loaded on demand by expanding `directory` nodes.
+- `incoming calls (clangd) in foo.c`
+- `outgoing calls (clangd) in foo.c`
+- `supertypes (lua_ls) in bar.lua`
+- `subtypes (lua_ls) in bar.lua`
 
 ## Setup
 
@@ -88,25 +93,43 @@ require("neo-tree").setup({
 
 ## Default behavior
 
-Both sources currently share the same default mappings:
+Both hierarchy sources currently use these mappings by default:
 
-- `<cr>`, `<2-LeftMouse>`, `l`: expand/collapse the selected hierarchy node
+- `<cr>`, `<2-LeftMouse>`, `l`: expand / collapse the selected hierarchy node
 - `h`: close the selected node
 - `o`: jump to the selected hierarchy item
 - `P`: toggle preview
-- `gd`: toggle direction (incoming ↔ outgoing, supertypes ↔ subtypes)
+- `gd`: toggle direction
+  - `call_hierarchy`: incoming ↔ outgoing
+  - `type_hierarchy`: supertypes ↔ subtypes
 - `/`: open Neo-tree's live filter prompt
 - `f`: filter on submit
 
-The root node label reflects the active direction, e.g. `incoming calls (clangd) in foo.lua` or `subtypes (lua_ls) in bar.lua`.
+A number of file-oriented Neo-tree mappings are intentionally disabled with `noop` because these sources expose LSP hierarchy items, not filesystem operations.
 
-A number of file-oriented mappings are intentionally disabled with `noop` because these sources expose LSP hierarchy items, not filesystem operations.
+## Display behavior
+
+### Call hierarchy
+
+Call hierarchy nodes show the symbol name and, when applicable, an inline call count suffix:
+
+- no suffix for a single call site
+- `×2`, `×3`, ... for repeated call sites
+- the suffix is rendered immediately to the right of the name
+
+### Type hierarchy
+
+Type hierarchy nodes show the resolved symbol kind and symbol name, without the extra call-count suffix used by `call_hierarchy`.
+
+### Preview and jump
+
+Preview and jump use the stored item range from the LSP hierarchy item. Before opening the target, the runtime preloads the target buffer so first-open navigation is reliable even when that buffer was not loaded yet.
 
 ## Configuration
 
 ### `auto_expand_depth`
 
-Controls how many hierarchy levels are expanded automatically after the initial render.
+Controls automatic expansion after the initial render.
 
 ```lua
 call_hierarchy = {
@@ -118,18 +141,18 @@ type_hierarchy = {
 }
 ```
 
-Current supported values:
+Current behavior:
 
 - `0`: do not auto-expand
-- `1`: auto-expand the first hierarchy level
+- `1` or greater: auto-expand the first hierarchy level under each root
 
-The default is `1` for both sources. Direction switching with `gd` respects the same setting.
+The current implementation only auto-expands one level.
 
 ### `client_filters`
 
 Controls which LSP clients contribute hierarchy roots.
 
-#### Use the first matching client
+#### First matching client
 
 ```lua
 call_hierarchy = {
@@ -139,7 +162,7 @@ call_hierarchy = {
 
 This is the default.
 
-#### Use every matching client
+#### All matching clients
 
 ```lua
 type_hierarchy = {
@@ -147,7 +170,7 @@ type_hierarchy = {
 }
 ```
 
-#### Restrict by client name
+#### Allow only selected client names
 
 ```lua
 call_hierarchy = {
@@ -158,7 +181,7 @@ call_hierarchy = {
 }
 ```
 
-#### Ignore selected clients
+#### Ignore selected client names
 
 ```lua
 type_hierarchy = {
@@ -183,7 +206,7 @@ call_hierarchy = {
 
 ### `custom_kinds`
 
-Overrides the mapping from numeric LSP symbol kind ids to display names.
+Overrides the default mapping from numeric LSP symbol kind ids to kind names.
 
 ```lua
 type_hierarchy = {
@@ -195,7 +218,7 @@ type_hierarchy = {
 
 ### `kinds`
 
-Controls icon and highlight rendering per kind name.
+Controls icon and highlight rendering for each kind name.
 
 ```lua
 call_hierarchy = {
@@ -218,7 +241,7 @@ Available shared components are:
 - `detail`
 - `kind_name`
 
-Example:
+The current default directory renderer keeps `detail` inline next to `name`:
 
 ```lua
 call_hierarchy = {
@@ -226,8 +249,13 @@ call_hierarchy = {
     directory = {
       { "indent", with_expanders = true },
       { "kind_icon" },
-      { "name", zindex = 10 },
-      { "detail", zindex = 20 },
+      {
+        "container",
+        content = {
+          { "name", zindex = 10 },
+          { "detail", zindex = 10, prefix = " ", highlight = "Function" },
+        },
+      },
     },
   },
 }
@@ -235,10 +263,8 @@ call_hierarchy = {
 
 ## Current limitations
 
-- `call_hierarchy` and `type_hierarchy` support switching directions, but each source currently auto-expands at most one level (`auto_expand_depth = 0` or `1`).
-- The source roots are grouped by LSP client, so using `client_filters = "all"` can show multiple root sections for the same symbol.
-- If no attached client supports the relevant hierarchy capability, the source renders an empty-state message instead of a tree.
-
-## Smoke test status
-
-The current implementation has been checked with a headless Neo-tree setup and loads both sources successfully.
+- Roots are grouped by LSP client, so `client_filters = "all"` can show multiple root sections for the same symbol.
+- Child hierarchy items are loaded on demand when you expand a node.
+- `auto_expand_depth` currently expands only the first hierarchy level.
+- If no attached client supports the requested hierarchy feature, the source renders an empty-state message instead of a tree.
+- If the prepare request returns no hierarchy items, the source also renders an empty-state message.
