@@ -252,12 +252,12 @@ local function auto_expand_roots(state)
   end
 
   local tree = state.tree
-  if not tree or not tree.root or not tree.root.children then
+  if not tree then
     return
   end
 
-  for _, root in ipairs(tree.root.children) do
-    for _, child in ipairs(root.children or {}) do
+  for _, root in ipairs(tree:get_nodes() or {}) do
+    for _, child in ipairs(tree:get_nodes(root:get_id()) or {}) do
       if child.type == "directory" and child.loaded == false then
         load_directory(state, child)
       end
