@@ -34,6 +34,20 @@ local function build_location(item)
   }
 end
 
+local function show_document_safe(location, position_encoding, opts)
+  local uri = location.targetUri or location.uri
+  if not uri then
+    return false
+  end
+
+  local bufnr = vim.uri_to_bufnr(uri)
+  if not vim.api.nvim_buf_is_loaded(bufnr) then
+    vim.fn.bufload(bufnr)
+  end
+
+  return util.show_document(location, position_encoding, opts)
+end
+
 local function make_message_node(id, name, path, kind_getter)
   return {
     id = id,
@@ -378,7 +392,7 @@ M.jump_to_item = function(state, node)
     return
   end
 
-  util.show_document(build_location(item), position_encoding, { reuse_win = true, focus = true })
+  show_document_safe(build_location(item), position_encoding, { reuse_win = true, focus = true })
 end
 
 M.show_item = function(state, node)
@@ -394,7 +408,7 @@ M.show_item = function(state, node)
   end
 
   local neo_win = vim.api.nvim_get_current_win()
-  util.show_document(build_location(item), position_encoding, { reuse_win = true, focus = false })
+  show_document_safe(build_location(item), position_encoding, { reuse_win = true, focus = false })
   if vim.api.nvim_win_is_valid(neo_win) then
     vim.api.nvim_set_current_win(neo_win)
   end
