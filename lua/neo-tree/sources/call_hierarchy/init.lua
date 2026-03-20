@@ -16,7 +16,8 @@ local spec = {
       child_method = "callHierarchy/incomingCalls",
       empty_children_label = "No incoming calls",
       relation_builder = function(relation)
-        return relation.from, string.format("%d call site%s", #(relation.fromRanges or {}), #(relation.fromRanges or {}) == 1 and "" or "s")
+        local n = #(relation.fromRanges or {})
+        return relation.from, (n > 1 and ("×" .. tostring(n)) or nil)
       end,
     },
     {
@@ -25,7 +26,8 @@ local spec = {
       child_method = "callHierarchy/outgoingCalls",
       empty_children_label = "No outgoing calls",
       relation_builder = function(relation)
-        return relation.to, string.format("%d call site%s", #(relation.fromRanges or {}), #(relation.fromRanges or {}) == 1 and "" or "s")
+        local n = #(relation.fromRanges or {})
+        return relation.to, (n > 1 and ("×" .. tostring(n)) or nil)
       end,
     },
   },

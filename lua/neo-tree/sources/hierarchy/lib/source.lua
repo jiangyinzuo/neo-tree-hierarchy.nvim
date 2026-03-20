@@ -49,11 +49,8 @@ end
 
 local function make_item_node(state, opts)
   local kind = state.hierarchy.kind_getter(opts.item.kind)
-  local detail = opts.item.detail
+  local detail = opts.detail_suffix
   local position, end_position = get_item_positions(opts.item)
-  if opts.detail_suffix and opts.detail_suffix ~= "" then
-    detail = detail and (detail .. " · " .. opts.detail_suffix) or opts.detail_suffix
-  end
 
   return {
     id = opts.id,

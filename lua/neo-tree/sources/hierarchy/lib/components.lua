@@ -40,7 +40,7 @@ M.detail = function(config, node)
   end
 
   return {
-    text = (config.prefix or " ") .. detail,
+    text = (config.prefix ~= nil and config.prefix or " ") .. detail,
     highlight = config.highlight or highlights.DIM_TEXT,
   }
 end

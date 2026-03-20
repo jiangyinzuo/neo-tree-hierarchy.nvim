@@ -14,8 +14,7 @@ local defaults = {
         "container",
         content = {
           { "name", zindex = 10 },
-          { "detail", zindex = 20 },
-          { "kind_name", zindex = 30, align = "right" },
+          { "detail", zindex = 20, prefix = " ", highlight = "Function" },
         },
       },
     },
