@@ -4,8 +4,8 @@ Extra Neo-tree sources for browsing LSP call hierarchies and type hierarchies.
 
 ## What this provides
 
-- `call_hierarchy`: shows `textDocument/prepareCallHierarchy` results and lazily expands `callHierarchy/incomingCalls`
-- `type_hierarchy`: shows `textDocument/prepareTypeHierarchy` results and lazily expands `typeHierarchy/supertypes`
+- `call_hierarchy`: shows `textDocument/prepareCallHierarchy` results and lazily expands `callHierarchy/incomingCalls` or `callHierarchy/outgoingCalls`
+- `type_hierarchy`: shows `textDocument/prepareTypeHierarchy` results and lazily expands `typeHierarchy/supertypes` or `typeHierarchy/subtypes`
 - Shared hierarchy runtime under `lua/neo-tree/sources/hierarchy/lib/`
 
 The sources resolve the symbol under the cursor from Neo-tree's target window, group root items by LSP client, and open or preview the selected item with Neo-tree's standard commands.
@@ -44,6 +44,7 @@ lua/neo-tree/sources/
 5. Build one Neo-tree root node per matching client.
 6. Lazily request child nodes when a hierarchy item is expanded.
 7. Reuse Neo-tree preview and jump behavior for the selected item.
+8. Allow switching hierarchy direction from the source window.
 
 Implementation details:
 
@@ -76,9 +77,11 @@ require("neo-tree").setup({
   },
   call_hierarchy = {
     client_filters = "first",
+    auto_expand_depth = 1,
   },
   type_hierarchy = {
     client_filters = "first",
+    auto_expand_depth = 1,
   },
 })
 ```
@@ -87,14 +90,40 @@ require("neo-tree").setup({
 
 Both sources currently share the same default mappings:
 
-- `<cr>`, `o`: jump to the selected hierarchy item
+- `<cr>`, `<2-LeftMouse>`, `l`: expand/collapse the selected hierarchy node
+- `h`: close the selected node
+- `o`: jump to the selected hierarchy item
 - `P`: toggle preview
+- `gd`: toggle direction (incoming ↔ outgoing, supertypes ↔ subtypes)
 - `/`: open Neo-tree's live filter prompt
 - `f`: filter on submit
+
+The root node label reflects the active direction, e.g. `incoming calls (clangd) in foo.lua` or `subtypes (lua_ls) in bar.lua`.
 
 A number of file-oriented mappings are intentionally disabled with `noop` because these sources expose LSP hierarchy items, not filesystem operations.
 
 ## Configuration
+
+### `auto_expand_depth`
+
+Controls how many hierarchy levels are expanded automatically after the initial render.
+
+```lua
+call_hierarchy = {
+  auto_expand_depth = 1,
+}
+
+type_hierarchy = {
+  auto_expand_depth = 1,
+}
+```
+
+Current supported values:
+
+- `0`: do not auto-expand
+- `1`: auto-expand the first hierarchy level
+
+The default is `1` for both sources. Direction switching with `gd` respects the same setting.
 
 ### `client_filters`
 
@@ -206,8 +235,7 @@ call_hierarchy = {
 
 ## Current limitations
 
-- `call_hierarchy` currently shows **incoming** calls only.
-- `type_hierarchy` currently shows **supertypes** only.
+- `call_hierarchy` and `type_hierarchy` support switching directions, but each source currently auto-expands at most one level (`auto_expand_depth = 0` or `1`).
 - The source roots are grouped by LSP client, so using `client_filters = "all"` can show multiple root sections for the same symbol.
 - If no attached client supports the relevant hierarchy capability, the source renders an empty-state message instead of a tree.
 

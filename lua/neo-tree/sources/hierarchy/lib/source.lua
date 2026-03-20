@@ -199,6 +199,72 @@ local function build_root_nodes(state, bufname, clients, responses)
   return roots
 end
 
+local function load_directory(state, node)
+  local item = node.extra and node.extra.item or nil
+  local bufnr = resolve_node_bufnr(state, node)
+  local client = bufnr and resolve_node_client(state, node, bufnr) or nil
+  if not item or not client or not bufnr then
+    node.loaded = true
+    renderer.redraw(state)
+    return
+  end
+
+  node.extra.client_id = client.id
+  node.extra.position_encoding = get_client_encoding(client)
+  state.lsp_bufnr = bufnr
+
+  request(client, bufnr, state.hierarchy.child_method, { item = item }, function(err, result)
+    if err then
+      node.loaded = true
+      renderer.show_nodes({
+        make_message_node(node:get_id() .. ".0", err.message or "Hierarchy request failed", node.path, state.hierarchy.kind_getter),
+      }, state, node:get_id())
+      node:expand()
+      renderer.redraw(state)
+      return
+    end
+
+    local children = build_child_nodes(
+      state,
+      node:get_id(),
+      client.id,
+      get_client_encoding(client),
+      result,
+      state.hierarchy.relation_builder
+    )
+
+    if #children == 0 then
+      children = {
+        make_message_node(node:get_id() .. ".0", state.hierarchy.empty_children_label, node.path, state.hierarchy.kind_getter),
+      }
+    end
+
+    node.loaded = true
+    renderer.show_nodes(children, state, node:get_id())
+    node:expand()
+    renderer.redraw(state)
+  end)
+end
+
+local function auto_expand_roots(state)
+  if (state.hierarchy.auto_expand_depth or 0) < 1 then
+    return
+  end
+
+  local tree = state.tree
+  if not tree or not tree.root or not tree.root.children then
+    return
+  end
+
+  for _, root in ipairs(tree.root.children) do
+    for _, child in ipairs(root.children or {}) do
+      if child.type == "directory" and child.loaded == false then
+        load_directory(state, child)
+      end
+    end
+  end
+end
+
 M.setup = function(config, spec)
   config = config or {}
 
@@ -211,6 +277,7 @@ M.setup = function(config, spec)
     client_filter = client_filter_factory.build(config.client_filters),
     supports_client = spec.supports_client,
     root_label = spec.root_label,
+    auto_expand_depth = config.auto_expand_depth or 0,
     -- active direction (child_method + empty_children_label may differ per direction)
     child_method = direction_key and directions[1].child_method or spec.child_method,
     empty_children_label = direction_key and directions[1].empty_children_label or spec.empty_children_label,
@@ -241,7 +308,10 @@ M.navigate = function(state, callback)
       return
     end
 
-    renderer.show_nodes(roots, state, nil, callback)
+    renderer.show_nodes(roots, state, nil, function()
+      if callback then callback() end
+      auto_expand_roots(state)
+    end)
   end)
 end
 
@@ -252,44 +322,7 @@ M.toggle_directory = function(state, node)
   end
 
   if node.loaded == false then
-    local item = node.extra and node.extra.item or nil
-    local bufnr = resolve_node_bufnr(state, node)
-    local client = bufnr and resolve_node_client(state, node, bufnr) or nil
-    if not item or not client or not bufnr then
-      node.loaded = true
-      renderer.redraw(state)
-      return
-    end
-
-    node.extra.client_id = client.id
-    node.extra.position_encoding = get_client_encoding(client)
-    state.lsp_bufnr = bufnr
-
-    request(client, bufnr, state.hierarchy.child_method, { item = item }, function(err, result)
-      if err then
-        renderer.show_nodes({
-          make_message_node(node:get_id() .. ".0", err.message or "Hierarchy request failed", node.path, state.hierarchy.kind_getter),
-        }, state, node:get_id())
-        return
-      end
-
-      local children = build_child_nodes(
-        state,
-        node:get_id(),
-        client.id,
-        get_client_encoding(client),
-        result,
-        state.hierarchy.relation_builder
-      )
-
-      if #children == 0 then
-        children = {
-          make_message_node(node:get_id() .. ".0", state.hierarchy.empty_children_label, node.path, state.hierarchy.kind_getter),
-        }
-      end
-
-      renderer.show_nodes(children, state, node:get_id())
-    end)
+    load_directory(state, node)
     return
   end
 
