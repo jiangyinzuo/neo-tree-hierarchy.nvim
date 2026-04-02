@@ -34,6 +34,136 @@ local function build_location(item)
   }
 end
 
+local SCOPE_NODE_PATTERNS = {
+  "class",
+  "namespace",
+  "module",
+  "package",
+  "interface",
+  "struct",
+  "object",
+  "impl",
+}
+
+local NAME_FIELD_CANDIDATES = {
+  "name",
+  "path",
+  "declaration",
+}
+
+local NAME_NODE_TYPES = {
+  identifier = true,
+  type_identifier = true,
+  scoped_identifier = true,
+  qualified_identifier = true,
+  nested_identifier = true,
+  namespace_identifier = true,
+  dotted_name = true,
+  property_identifier = true,
+}
+
+local function node_text(bufnr, node)
+  if not node then
+    return nil
+  end
+
+  local ok, text = pcall(vim.treesitter.get_node_text, node, bufnr)
+  if not ok or type(text) ~= "string" or text == "" then
+    return nil
+  end
+
+  return text
+end
+
+local function is_scope_node(node)
+  if not node then
+    return false
+  end
+
+  local node_type = node:type()
+  for _, pattern in ipairs(SCOPE_NODE_PATTERNS) do
+    if node_type:find(pattern, 1, true) then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function scope_name_from_fields(bufnr, node)
+  for _, field in ipairs(NAME_FIELD_CANDIDATES) do
+    local field_node = node:field(field)[1]
+    local text = node_text(bufnr, field_node)
+    if text then
+      return text
+    end
+  end
+
+  return nil
+end
+
+local function scope_name_from_children(bufnr, node)
+  for child in node:iter_children() do
+    if child:named() and NAME_NODE_TYPES[child:type()] then
+      local text = node_text(bufnr, child)
+      if text then
+        return text
+      end
+    end
+  end
+
+  return nil
+end
+
+local function get_scope_prefix(item)
+  if not item or not item.uri then
+    return nil
+  end
+
+  local range = get_item_range(item)
+  local start_pos = range and range.start or nil
+  if not start_pos then
+    return nil
+  end
+
+  local bufnr = vim.uri_to_bufnr(item.uri)
+  if not vim.api.nvim_buf_is_loaded(bufnr) then
+    vim.fn.bufload(bufnr)
+  end
+
+  local parser_ok = pcall(vim.treesitter.get_parser, bufnr)
+  if not parser_ok then
+    return nil
+  end
+
+  local node_ok, node = pcall(vim.treesitter.get_node, {
+    bufnr = bufnr,
+    pos = { start_pos.line, start_pos.character },
+    ignore_injections = false,
+  })
+  if not node_ok or not node then
+    return nil
+  end
+
+  local scopes = {}
+  local parent = node
+  while parent do
+    if is_scope_node(parent) then
+      local name = scope_name_from_fields(bufnr, parent) or scope_name_from_children(bufnr, parent)
+      if name then
+        table.insert(scopes, 1, name)
+      end
+    end
+    parent = parent:parent()
+  end
+
+  if #scopes == 0 then
+    return nil
+  end
+
+  return table.concat(scopes, "::")
+end
+
 local function show_document_safe(location, position_encoding, opts)
   local uri = location.targetUri or location.uri
   if not uri then
@@ -61,6 +191,25 @@ local function make_message_node(id, name, path, kind_getter)
   }
 end
 
+local function build_item_name(kind, item)
+  local name = item.name
+  local detail = item.detail
+  local scope = get_scope_prefix(item)
+  local kind_name = kind and kind.name or nil
+
+  if kind_name == "Method" or kind_name == "Function" then
+    if type(scope) == "string" and scope ~= "" then
+      return string.format("%s::%s", scope, name)
+    end
+
+    if type(detail) == "string" and detail ~= "" then
+      return string.format("%s::%s", detail, name)
+    end
+  end
+
+  return name
+end
+
 local function make_item_node(state, opts)
   local kind = state.hierarchy.kind_getter(opts.item.kind)
   local detail = opts.detail_suffix
@@ -68,7 +217,7 @@ local function make_item_node(state, opts)
 
   return {
     id = opts.id,
-    name = opts.item.name,
+    name = build_item_name(kind, opts.item),
     path = vim.uri_to_fname(opts.item.uri),
     type = "directory",
     loaded = false,

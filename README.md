@@ -111,7 +111,9 @@ A number of file-oriented Neo-tree mappings are intentionally disabled with `noo
 
 ### Call hierarchy
 
-Call hierarchy nodes show the symbol name and, when applicable, an inline call count suffix:
+Call hierarchy nodes show the symbol name and try to render methods with their enclosing scope, for example `Foo::Bar::method`. The runtime first infers scope from Treesitter ancestors and falls back to LSP `detail` when available.
+
+When applicable, an inline call count suffix is also shown:
 
 - no suffix for a single call site
 - `×2`, `×3`, ... for repeated call sites
@@ -119,7 +121,7 @@ Call hierarchy nodes show the symbol name and, when applicable, an inline call c
 
 ### Type hierarchy
 
-Type hierarchy nodes show the resolved symbol kind and symbol name, without the extra call-count suffix used by `call_hierarchy`.
+Type hierarchy nodes show the resolved symbol kind and symbol name. Methods are rendered with their enclosing scope, for example `Foo::Bar::method`. The runtime first infers scope from Treesitter ancestors and falls back to LSP `detail` when available, without the extra call-count suffix used by `call_hierarchy`.
 
 ### Preview and jump
 
