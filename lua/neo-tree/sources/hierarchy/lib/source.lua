@@ -182,15 +182,10 @@ local function show_document_safe(location, position_encoding, opts)
 
     local line_count = vim.api.nvim_buf_line_count(bufnr)
     local max_line = math.max(line_count - 1, 0)
-    local line = math.max(math.min(pos.line or 0, max_line), 0)
-
-    local line_text = vim.api.nvim_buf_get_lines(bufnr, line, line + 1, false)[1] or ""
-    local max_col = #line_text
-    local character = math.max(math.min(pos.character or 0, max_col), 0)
 
     return {
-      line = line,
-      character = character,
+      line = math.max(math.min(pos.line or 0, max_line), 0),
+      character = math.max(pos.character or 0, 0),
     }
   end
 
