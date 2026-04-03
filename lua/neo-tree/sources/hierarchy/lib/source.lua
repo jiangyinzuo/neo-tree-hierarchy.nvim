@@ -175,7 +175,65 @@ local function show_document_safe(location, position_encoding, opts)
     vim.fn.bufload(bufnr)
   end
 
-  return util.show_document(location, position_encoding, opts)
+  local function clamp_position(pos)
+    if type(pos) ~= "table" then
+      return nil
+    end
+
+    local line_count = vim.api.nvim_buf_line_count(bufnr)
+    local max_line = math.max(line_count - 1, 0)
+    local line = math.max(math.min(pos.line or 0, max_line), 0)
+
+    local line_text = vim.api.nvim_buf_get_lines(bufnr, line, line + 1, false)[1] or ""
+    local max_col = #line_text
+    local character = math.max(math.min(pos.character or 0, max_col), 0)
+
+    return {
+      line = line,
+      character = character,
+    }
+  end
+
+  local function clamp_range(range)
+    if type(range) ~= "table" then
+      return nil
+    end
+
+    local start_pos = clamp_position(range.start)
+    local end_pos = clamp_position(range["end"])
+    if not start_pos then
+      return nil
+    end
+
+    return {
+      start = start_pos,
+      ["end"] = end_pos or start_pos,
+    }
+  end
+
+  local safe_location = vim.deepcopy(location)
+  safe_location.range = clamp_range(safe_location.range)
+  safe_location.targetRange = clamp_range(safe_location.targetRange)
+  safe_location.targetSelectionRange = clamp_range(safe_location.targetSelectionRange)
+
+  local ok, shown = pcall(util.show_document, safe_location, position_encoding, opts)
+  if ok then
+    return shown
+  end
+
+  local fallback_location = {
+    uri = uri,
+    range = {
+      start = { line = 0, character = 0 },
+      ["end"] = { line = 0, character = 0 },
+    },
+  }
+  local fallback_ok, fallback_shown = pcall(util.show_document, fallback_location, position_encoding, opts)
+  if fallback_ok then
+    return fallback_shown
+  end
+
+  return false
 end
 
 local function make_message_node(id, name, path, kind_getter)
