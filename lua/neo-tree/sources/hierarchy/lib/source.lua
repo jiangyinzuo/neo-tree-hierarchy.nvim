@@ -34,6 +34,45 @@ local function build_location(item)
   }
 end
 
+local function clamp_position_for_bufnr(bufnr, pos)
+  if type(pos) ~= "table" then
+    return nil
+  end
+
+  local line_count = vim.api.nvim_buf_line_count(bufnr)
+  local max_line = math.max(line_count - 1, 0)
+
+  return {
+    line = math.max(math.min(pos.line or 0, max_line), 0),
+    character = math.max(pos.character or 0, 0),
+  }
+end
+
+local function clamp_range_for_bufnr(bufnr, range)
+  if type(range) ~= "table" then
+    return nil
+  end
+
+  local start_pos = clamp_position_for_bufnr(bufnr, range.start)
+  local end_pos = clamp_position_for_bufnr(bufnr, range["end"])
+  if not start_pos then
+    return nil
+  end
+
+  return {
+    start = start_pos,
+    ["end"] = end_pos or start_pos,
+  }
+end
+
+local function sanitize_location_for_bufnr(bufnr, location)
+  local safe_location = vim.deepcopy(location)
+  safe_location.range = clamp_range_for_bufnr(bufnr, safe_location.range)
+  safe_location.targetRange = clamp_range_for_bufnr(bufnr, safe_location.targetRange)
+  safe_location.targetSelectionRange = clamp_range_for_bufnr(bufnr, safe_location.targetSelectionRange)
+  return safe_location
+end
+
 local SCOPE_NODE_PATTERNS = {
   "class",
   "namespace",
@@ -175,41 +214,7 @@ local function show_document_safe(location, position_encoding, opts)
     vim.fn.bufload(bufnr)
   end
 
-  local function clamp_position(pos)
-    if type(pos) ~= "table" then
-      return nil
-    end
-
-    local line_count = vim.api.nvim_buf_line_count(bufnr)
-    local max_line = math.max(line_count - 1, 0)
-
-    return {
-      line = math.max(math.min(pos.line or 0, max_line), 0),
-      character = math.max(pos.character or 0, 0),
-    }
-  end
-
-  local function clamp_range(range)
-    if type(range) ~= "table" then
-      return nil
-    end
-
-    local start_pos = clamp_position(range.start)
-    local end_pos = clamp_position(range["end"])
-    if not start_pos then
-      return nil
-    end
-
-    return {
-      start = start_pos,
-      ["end"] = end_pos or start_pos,
-    }
-  end
-
-  local safe_location = vim.deepcopy(location)
-  safe_location.range = clamp_range(safe_location.range)
-  safe_location.targetRange = clamp_range(safe_location.targetRange)
-  safe_location.targetSelectionRange = clamp_range(safe_location.targetSelectionRange)
+  local safe_location = sanitize_location_for_bufnr(bufnr, location)
 
   local ok, shown = pcall(util.show_document, safe_location, position_encoding, opts)
   if ok then
