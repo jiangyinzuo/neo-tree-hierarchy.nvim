@@ -164,20 +164,6 @@ local function get_scope_prefix(item)
   return table.concat(scopes, "::")
 end
 
-local function show_document_safe(location, position_encoding, opts)
-  local uri = location.targetUri or location.uri
-  if not uri then
-    return false
-  end
-
-  local bufnr = vim.uri_to_bufnr(uri)
-  if not vim.api.nvim_buf_is_loaded(bufnr) then
-    vim.fn.bufload(bufnr)
-  end
-
-  return util.show_document(location, position_encoding, opts)
-end
-
 local function make_message_node(id, name, path, kind_getter)
   return {
     id = id,
@@ -541,7 +527,14 @@ M.jump_to_item = function(state, node)
     return
   end
 
-  show_document_safe(build_location(item), position_encoding, { reuse_win = true, focus = true })
+  local target_win = state.lsp_winid
+  vim.api.nvim_win_call(target_win, function()
+    vim.lsp.util.show_document(build_location(item), position_encoding, {
+      reuse_win = true,
+      focus = true,
+    })
+  end)
+  vim.api.nvim_set_current_win(target_win)
 end
 
 M.show_item = function(state, node)
@@ -557,7 +550,10 @@ M.show_item = function(state, node)
   end
 
   local neo_win = vim.api.nvim_get_current_win()
-  show_document_safe(build_location(item), position_encoding, { reuse_win = true, focus = false })
+  vim.lsp.util.show_document(build_location(item), position_encoding, {
+    reuse_win = true,
+    focus = true,
+  })
   if vim.api.nvim_win_is_valid(neo_win) then
     vim.api.nvim_set_current_win(neo_win)
   end
