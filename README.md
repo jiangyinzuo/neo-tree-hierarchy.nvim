@@ -14,29 +14,6 @@ Extra Neo-tree sources for browsing LSP call hierarchies and type hierarchies.
 
 Both sources resolve the symbol under the cursor from Neo-tree's target window, group root items by LSP client, lazily load child nodes when you expand them, and reuse Neo-tree's normal jump / preview flow for the selected item.
 
-## Source layout
-
-```text
-lua/neo-tree/sources/
-├── call_hierarchy/
-│   ├── init.lua
-│   ├── commands.lua
-│   ├── components.lua
-│   └── defaults.lua
-├── type_hierarchy/
-│   ├── init.lua
-│   ├── commands.lua
-│   ├── components.lua
-│   └── defaults.lua
-└── hierarchy/lib/
-    ├── source.lua
-    ├── commands.lua
-    ├── components.lua
-    ├── defaults.lua
-    ├── client_filters.lua
-    └── kinds.lua
-```
-
 ## How it works
 
 The shared runtime in `lua/neo-tree/sources/hierarchy/lib/source.lua` does the heavy lifting for both sources:
@@ -95,9 +72,10 @@ require("neo-tree").setup({
 
 Both hierarchy sources currently use these mappings by default:
 
-- `<cr>`, `<2-LeftMouse>`, `l`: expand / collapse the selected hierarchy node
+- `<2-LeftMouse>`, `l`: expand / collapse the selected hierarchy node
 - `h`: close the selected node
 - `o`: jump to the selected hierarchy item
+- `p`: show the selected hierarchy item
 - `P`: toggle preview
 - `gd`: toggle direction
   - `call_hierarchy`: incoming ↔ outgoing

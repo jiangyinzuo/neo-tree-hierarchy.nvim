@@ -25,7 +25,7 @@ local defaults = {
   },
   window = {
     mappings = {
-      ["<cr>"] = "toggle_node",
+      ["<cr>"] = "noop",
       ["<2-LeftMouse>"] = "toggle_node",
       ["o"] = "jump_to_item",
       ["l"] = "toggle_node",
@@ -40,7 +40,7 @@ local defaults = {
       ["r"] = "noop",
       ["y"] = "noop",
       ["x"] = "noop",
-      ["p"] = "noop",
+      ["p"] = "show_item",
       ["<C-r>"] = "noop",
       ["c"] = "noop",
       ["m"] = "noop",

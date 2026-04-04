@@ -524,7 +524,7 @@ M.toggle_direction = function(state)
   manager.refresh(state.name)
 end
 
-M.jump_to_item = function(state, node)
+local function do_show_item(state, node, jump_to_item)
   node = node or state.tree:get_node()
   if not node or node.type == "root" or node.type == "message" then
     return
@@ -543,29 +543,15 @@ M.jump_to_item = function(state, node)
       focus = true,
     })
   end)
-  vim.api.nvim_set_current_win(target_win)
+  if jump_to_item then
+    vim.api.nvim_set_current_win(target_win)
+  end
 end
-
 M.show_item = function(state, node)
-  node = node or state.tree:get_node()
-  if not node or node.type == "root" or node.type == "message" then
-    return
-  end
-
-  local item = node.extra and node.extra.item or nil
-  local position_encoding = node.extra and node.extra.position_encoding or nil
-  if not item or not position_encoding then
-    return
-  end
-
-  local neo_win = vim.api.nvim_get_current_win()
-  vim.lsp.util.show_document(build_location(item), position_encoding, {
-    reuse_win = true,
-    focus = true,
-  })
-  if vim.api.nvim_win_is_valid(neo_win) then
-    vim.api.nvim_set_current_win(neo_win)
-  end
+  do_show_item(state, node, false)
+end
+M.jump_to_item = function(state, node)
+  do_show_item(state, node, true)
 end
 
 return M
