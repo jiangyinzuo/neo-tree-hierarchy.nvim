@@ -189,6 +189,15 @@ local function build_item_name(kind, item)
     end
 
     if type(detail) == "string" and detail ~= "" then
+      if kind_name == "Function" then
+        if detail == name then
+          return name
+        end
+        if vim.endswith(detail, "::" .. name) or vim.endswith(detail, "." .. name) then
+          return detail
+        end
+      end
+
       return string.format("%s::%s", detail, name)
     end
   end
