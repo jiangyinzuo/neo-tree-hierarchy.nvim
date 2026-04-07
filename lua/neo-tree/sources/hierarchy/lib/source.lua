@@ -196,9 +196,9 @@ local function build_item_name(kind, item)
         if detail == name then
           return name
         end
-        if vim.endswith(detail, "::" .. name) or vim.endswith(detail, "." .. name) then
-          return detail
-        end
+      end
+      if vim.endswith(detail, "::" .. name) or vim.endswith(detail, "." .. name) then
+        return detail
       end
 
       return string.format("%s::%s", detail, name)
