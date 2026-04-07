@@ -185,6 +185,9 @@ local function build_item_name(kind, item)
 
   if kind_name == "Method" or kind_name == "Function" then
     if type(scope) == "string" and scope ~= "" then
+      if scope == name or vim.endswith(scope, "::" .. name) or vim.endswith(scope, "." .. name) then
+        return scope
+      end
       return string.format("%s::%s", scope, name)
     end
 
@@ -193,9 +196,9 @@ local function build_item_name(kind, item)
         if detail == name then
           return name
         end
-        if vim.endswith(detail, "::" .. name) or vim.endswith(detail, "." .. name) then
-          return detail
-        end
+      end
+      if vim.endswith(detail, "::" .. name) or vim.endswith(detail, "." .. name) then
+        return detail
       end
 
       return string.format("%s::%s", detail, name)
