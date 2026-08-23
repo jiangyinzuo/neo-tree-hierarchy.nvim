@@ -25,13 +25,7 @@ M.create = function(source_name)
     filters.show_filter(state, true)
   end
 
-  cc._add_common_commands(commands, "node")
-  cc._add_common_commands(commands, "^close_window$")
-  cc._add_common_commands(commands, "source$")
-  cc._add_common_commands(commands, "preview")
-  cc._add_common_commands(commands, "^cancel$")
-  cc._add_common_commands(commands, "help")
-  cc._add_common_commands(commands, "^toggle_auto_expand_width$")
+  cc._add_common_commands(commands)
 
   return commands
 end
