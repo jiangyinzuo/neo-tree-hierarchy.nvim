@@ -70,13 +70,19 @@ require("neo-tree").setup({
 
 ## Default behavior
 
-Both hierarchy sources currently use these mappings by default:
+Both hierarchy sources inherit Neo-tree's global navigation and preview mappings,
+including user overrides. With Neo-tree's defaults:
 
-- `<2-LeftMouse>`, `l`: expand / collapse the selected hierarchy node
-- `h`: close the selected node
+- `<space>`: expand / collapse the selected hierarchy node
+- `<cr>`, `<2-LeftMouse>`: jump to the selected hierarchy item
+- `C`: close the selected node
+- `l`: focus preview
+- `P`: toggle preview (inherits the global preview configuration)
+
+Hierarchy-specific mappings:
+
 - `o`: jump to the selected hierarchy item
 - `p`: show the selected hierarchy item
-- `P`: toggle preview
 - `gd`: toggle direction
   - `call_hierarchy`: incoming ↔ outgoing
   - `type_hierarchy`: supertypes ↔ subtypes
