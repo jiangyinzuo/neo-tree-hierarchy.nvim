@@ -102,7 +102,7 @@ LSP `detail` instead, without loading the file or triggering buffer events merel
 to decorate a label. Class labels do not perform scope inference.
 
 Empty-state messages such as `No subtypes` and `No supertypes` use dark gray
-(`#777777`) without bold, independently of symbol colors.
+(`#777777`) in italics without bold, independently of symbol colors.
 
 When applicable, an inline call count suffix is also shown:
 
@@ -278,4 +278,4 @@ plugin. Set `NEOTREE_TEST_DEPS` to their parent directory for another layout.
 
 Coverage includes hidden-file buffer-event isolation, method scope fallback,
 loaded-buffer scope inference, ancestor expansion and loaded-child reuse.
-Empty-state rendering also checks dark-gray, non-bold text and theme changes.
+Empty-state rendering also checks dark-gray, italic, non-bold text and theme changes.

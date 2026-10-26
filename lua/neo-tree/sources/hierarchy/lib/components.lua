@@ -5,7 +5,7 @@ local M = {}
 
 -- 空状态是辅助提示，不继承目录或根节点的粗体样式。
 local function define_message_highlight()
-  vim.api.nvim_set_hl(0, "NeoTreeHierarchyMessage", { fg = "#777777", ctermfg = 243, bold = false })
+  vim.api.nvim_set_hl(0, "NeoTreeHierarchyMessage", { fg = "#777777", ctermfg = 243, bold = false, italic = true })
 end
 define_message_highlight()
 vim.api.nvim_create_autocmd("ColorScheme", {
