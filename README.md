@@ -97,6 +97,13 @@ A number of file-oriented Neo-tree mappings are intentionally disabled with `noo
 
 Call hierarchy nodes show the symbol name and try to render methods with their enclosing scope, for example `Foo::Bar::method`. The runtime first infers scope from Treesitter ancestors and falls back to LSP `detail` when available.
 
+Scope inference only inspects already-loaded buffers. For unopened files it uses
+LSP `detail` instead, without loading the file or triggering buffer events merely
+to decorate a label. Class labels do not perform scope inference.
+
+Empty-state messages such as `No subtypes` and `No supertypes` use dark gray
+(`#777777`) without bold, independently of symbol colors.
+
 When applicable, an inline call count suffix is also shown:
 
 - no suffix for a single call site
@@ -254,3 +261,21 @@ call_hierarchy = {
 - `auto_expand_depth` currently expands only the first hierarchy level.
 - If no attached client supports the requested hierarchy feature, the source renders an empty-state message instead of a tree.
 - If the prepare request returns no hierarchy items, the source also renders an empty-state message.
+
+## Tests
+
+Run from the plugin directory with Neovim 0.11+ and an installed Python
+Tree-sitter parser:
+
+```sh
+nvim --headless -u NONE -l tests/run.lua
+```
+
+The test uses real Neo-tree rendering with deterministic LSP responses; no
+language server or project indexing is required. By default it finds
+`neo-tree.nvim`, `nui.nvim`, `plenary.nvim` and `nvim-treesitter` next to this
+plugin. Set `NEOTREE_TEST_DEPS` to their parent directory for another layout.
+
+Coverage includes hidden-file buffer-event isolation, method scope fallback,
+loaded-buffer scope inference, ancestor expansion and loaded-child reuse.
+Empty-state rendering also checks dark-gray, non-bold text and theme changes.

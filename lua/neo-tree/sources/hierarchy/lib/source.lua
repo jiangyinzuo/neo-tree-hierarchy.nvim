@@ -128,7 +128,9 @@ local function get_scope_prefix(item)
 
   local bufnr = vim.uri_to_bufnr(item.uri)
   if not vim.api.nvim_buf_is_loaded(bufnr) then
-    vim.fn.bufload(bufnr)
+    -- 名称修饰不能为隐藏文件触发 BufEnter、LSP attach 或其他 source 的刷新。
+    -- 未加载文件交给 build_item_name 的 LSP detail 回退，不改变用户编辑状态。
+    return nil
   end
 
   local parser_ok = pcall(vim.treesitter.get_parser, bufnr)
@@ -180,10 +182,10 @@ end
 local function build_item_name(kind, item)
   local name = item.name
   local detail = item.detail
-  local scope = get_scope_prefix(item)
   local kind_name = kind and kind.name or nil
 
   if kind_name == "Method" or kind_name == "Function" then
+    local scope = get_scope_prefix(item)
     if type(scope) == "string" and scope ~= "" then
       if scope == name or vim.endswith(scope, "::" .. name) or vim.endswith(scope, "." .. name) then
         return scope

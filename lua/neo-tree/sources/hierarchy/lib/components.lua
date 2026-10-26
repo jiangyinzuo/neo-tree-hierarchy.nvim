@@ -3,6 +3,16 @@ local highlights = require("neo-tree.ui.highlights")
 
 local M = {}
 
+-- 空状态是辅助提示，不继承目录或根节点的粗体样式。
+local function define_message_highlight()
+  vim.api.nvim_set_hl(0, "NeoTreeHierarchyMessage", { fg = "#777777", ctermfg = 243, bold = false })
+end
+define_message_highlight()
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("NeoTreeHierarchyHighlights", { clear = true }),
+  callback = define_message_highlight,
+})
+
 local function get_kind(node)
   return node.extra and node.extra.kind or nil
 end
@@ -46,6 +56,9 @@ M.detail = function(config, node)
 end
 
 M.name = function(config, node)
+  if node.type == "message" then
+    return { text = node.name, highlight = "NeoTreeHierarchyMessage" }
+  end
   local kind = get_kind(node)
   return {
     text = node.name,
